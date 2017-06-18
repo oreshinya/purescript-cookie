@@ -1,11 +1,18 @@
-module Node.HTTP.Cookie where
+module Node.HTTP.Cookie
+  ( Payload
+  , setCookie
+  , getCookie
+  , getCookies
+  ) where
 
 import Prelude
 import Control.Monad.Eff (Eff)
-import Data.Array (snoc)
-import Data.Maybe (Maybe(..))
-import Data.String (joinWith)
-import Node.HTTP (HTTP, Response, setHeader)
+import Data.Array (snoc, (!!))
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String (Pattern(..), split, trim, joinWith)
+import Data.StrMap (StrMap, lookup, empty, fromFoldable)
+import Data.Tuple (Tuple(..))
+import Node.HTTP (HTTP, Request, Response, setHeader, requestHeaders)
 
 
 
@@ -50,3 +57,31 @@ setHttpOnly pld xs =
   if pld.httpOnly
     then snoc xs "HttpOnly"
     else xs
+
+
+
+getCookie :: Request -> String -> Maybe String
+getCookie req key = lookup key $ getCookies req
+
+
+
+getCookies :: Request -> StrMap String
+getCookies req =
+  case (getCookieStr req) of
+    Nothing -> empty
+    Just str ->
+      fromFoldable $ map (trim >>> toTuple) $ split (Pattern ";") str
+
+
+
+getCookieStr :: Request -> Maybe String
+getCookieStr req = lookup "Cookie" $ requestHeaders req
+
+
+
+toTuple :: String -> Tuple String String
+toTuple str =
+  let ary = split (Pattern "=") str
+      key = fromMaybe "" $ ary !! 0
+      val = fromMaybe "" $ ary !! 1
+   in Tuple key val
