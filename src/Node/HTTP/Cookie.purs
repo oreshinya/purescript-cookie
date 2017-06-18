@@ -12,7 +12,7 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, trim, joinWith)
 import Data.StrMap (StrMap, lookup, empty, fromFoldable)
 import Data.Tuple (Tuple(..))
-import Node.HTTP (HTTP, Request, Response, setHeader, requestHeaders)
+import Node.HTTP (HTTP, Request, Response, setHeaders, requestHeaders)
 
 
 
@@ -27,7 +27,7 @@ type Payload =
 
 
 setCookie :: forall e. Response -> Payload -> Eff (http :: HTTP | e) Unit
-setCookie res pld = setHeader res "Set-Cookie" $ toField pld
+setCookie res pld = setHeaders res "Set-Cookie" $ snoc (responseCookies res) $ toField pld
 
 
 
@@ -85,3 +85,7 @@ toTuple str =
       key = fromMaybe "" $ ary !! 0
       val = fromMaybe "" $ ary !! 1
    in Tuple key val
+
+
+
+foreign import responseCookies :: Response -> Array String
