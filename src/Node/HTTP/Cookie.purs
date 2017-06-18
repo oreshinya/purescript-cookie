@@ -75,7 +75,7 @@ getCookies req =
 
 
 getCookieStr :: Request -> Maybe String
-getCookieStr req = lookup "Cookie" $ requestHeaders req
+getCookieStr req = lookup "cookie" $ requestHeaders req
 
 
 
