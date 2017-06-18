@@ -1,0 +1,27 @@
+{
+  "name": "purescript-cookie",
+  "license": "MIT",
+  "homepage": "https://github.com/oreshinya/purescript-cookie",
+  "authors": [
+    "Shinya Takahashi <s.takahashi313@gmail.com>"
+  ],
+  "description": "PureScript Cookie manager",
+  "keywords": [
+    "purescript",
+    "node",
+    "cookie"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/oreshinya/purescript-cookie.git"
+  },
+  "moduleType": [
+    "node"
+  ],
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ]
+}
