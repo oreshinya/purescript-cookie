@@ -4,10 +4,11 @@
   "scripts": {
     "clean": "rm -rf output",
     "bower:install": "bower install",
-    "pulp:build": "pulp build",
+    "pulp:build": "pulp build --include example",
     "pulp:version": "pulp version",
     "pulp:publish": "pulp publish",
-    "pulp:login": "pulp login"
+    "pulp:login": "pulp login",
+    "start": "node index.js"
   },
   "dependencies": {
     "bower": "^1.8.0",

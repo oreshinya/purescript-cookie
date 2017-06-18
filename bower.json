@@ -33,5 +33,9 @@
     "purescript-prelude": "^3.0.0",
     "purescript-maps": "^3.3.1",
     "purescript-tuples": "^4.1.0"
+  },
+  "devDependencies": {
+    "purescript-conveyor": "^0.4.1",
+    "purescript-node-process": "^4.0.0"
   }
 }
