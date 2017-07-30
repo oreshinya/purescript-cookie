@@ -2,21 +2,23 @@ module Main where
 
 
 import Prelude
+
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff.Ref (REF)
 import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.Monad.Except (ExceptT)
+import Control.Monad.Eff.Ref (REF)
+import Conveyor (run)
+import Conveyor.Handler (Handler)
+import Conveyor.Responsable (Result, result, respond, errorMsg)
+import Conveyor.Servable (class Servable, serve)
 import Data.Foreign.Class (class Encode)
 import Data.Foreign.Generic (defaultOptions, genericEncode)
-import Data.Maybe (Maybe(..))
-import Data.Int (fromString)
-import Node.HTTP (HTTP, requestHeaders)
-import Node.Process (PROCESS, lookupEnv)
 import Data.Generic.Rep (class Generic)
-import Conveyor (App, Config(..), Context(..), Break, Result(..), Respond, Router, app, route, (:>), run)
+import Data.Int (fromString)
+import Data.Maybe (Maybe(..))
+import Node.HTTP (HTTP, ListenOptions, requestHeaders)
 import Node.HTTP.Cookie (setCookie, getCookie, getCookies)
+import Node.Process (PROCESS, lookupEnv)
 
 
 
@@ -48,47 +50,41 @@ getBacklog = pure Nothing
 
 
 
-getConfig :: forall e. Eff (process :: PROCESS | e) Config
+getConfig :: forall e. Eff (process :: PROCESS | e) ListenOptions
 getConfig = do
   hostname <- getHostname
   port <- getPort
   backlog <- getBacklog
-  pure $ Config { hostname, port, backlog }
+  pure { hostname, port, backlog }
 
 
 
-myJson :: forall e. Context -> ExceptT Break (Eff e) (Result MyJson)
-myJson _ = pure $ Result { status: 200, body: Just $ MyJson { content: "test content :)" } }
+myJson :: forall e. Handler e (Result MyJson)
+myJson = pure $ result 200 $ MyJson { content: "test content :)" }
 
 
 
-router :: forall e. Router Context e MyJson
-router = route [ "/myJson" :> myJson ]
+newtype Cookie s = Cookie s
 
-
-
-respond :: forall e. Respond Context (http :: HTTP, console :: CONSOLE | e) MyJson
-respond ctx@(Context { req, res }) exec = do
-  liftEff $ log $ show $ requestHeaders req
-  liftEff $ log $ show $ getCookies req
-  liftEff $ log $ show $ getCookie req "id"
-  liftEff $ setCookie res
-    { key: "id"
-    , value: "fjdkaflk"
-    , maxAge: Just 60
-    , secure: false
-    , httpOnly: true
-    }
-  exec ctx
-
-
-
-app' :: forall e. App Context (http :: HTTP, console :: CONSOLE | e) MyJson
-app' = app router respond
+instance servableCookie :: Servable (console :: CONSOLE | e) s => Servable (console :: CONSOLE | e) (Cookie s) where
+  serve (Cookie handler) req res path = Just do
+    log $ show $ requestHeaders req
+    log $ show $ getCookies req
+    log $ show $ getCookie req "id"
+    setCookie res
+      { key: "id"
+      , value: "fjdkaflk"
+      , maxAge: Just 60
+      , secure: false
+      , httpOnly: true
+      }
+    case serve handler req res path of
+      Nothing -> respond res $ errorMsg 500 "Something went wrong."
+      Just s -> s
 
 
 
 main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, exception :: EXCEPTION, ref :: REF, http :: HTTP | e ) Unit
 main = do
   config <- getConfig
-  run config app'
+  run config $ Cookie { myJson }
