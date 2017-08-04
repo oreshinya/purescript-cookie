@@ -66,8 +66,8 @@ myJson = pure $ result 200 $ MyJson { content: "test content :)" }
 
 newtype Cookie s = Cookie s
 
-instance servableCookie :: Servable (console :: CONSOLE | e) s => Servable (console :: CONSOLE | e) (Cookie s) where
-  serve (Cookie handler) req res path = Just do
+instance servableCookie :: Servable c (console :: CONSOLE | e) s => Servable c (console :: CONSOLE | e) (Cookie s) where
+  serve ctx (Cookie handler) req res path = Just do
     log $ show $ requestHeaders req
     log $ show $ getCookies req
     log $ show $ getCookie req "id"
@@ -78,7 +78,7 @@ instance servableCookie :: Servable (console :: CONSOLE | e) s => Servable (cons
       , secure: false
       , httpOnly: true
       }
-    case serve handler req res path of
+    case serve ctx handler req res path of
       Nothing -> respond res $ errorMsg 500 "Something went wrong."
       Just s -> s
 
@@ -87,4 +87,4 @@ instance servableCookie :: Servable (console :: CONSOLE | e) s => Servable (cons
 main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, exception :: EXCEPTION, ref :: REF, http :: HTTP | e ) Unit
 main = do
   config <- getConfig
-  run config $ Cookie { myJson }
+  run (Cookie { myJson }) config
