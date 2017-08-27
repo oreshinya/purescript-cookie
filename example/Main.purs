@@ -9,10 +9,10 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Ref (REF)
 import Conveyor (run)
 import Conveyor.Handler (Handler)
-import Conveyor.Responsable (Result, result, respond, errorMsg)
+import Conveyor.Respondable (class Respondable, ConveyorError(..), respond)
 import Conveyor.Servable (class Servable, serve)
 import Data.Foreign.Class (class Encode)
-import Data.Foreign.Generic (defaultOptions, genericEncode)
+import Data.Foreign.Generic (defaultOptions, encodeJSON, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
@@ -21,6 +21,19 @@ import Node.HTTP.Cookie (setCookie, getCookie, getCookies)
 import Node.Process (PROCESS, lookupEnv)
 
 
+
+data Result r
+  = Success { status :: Int, body :: r }
+  | Failure { status :: Int, message :: String }
+
+instance respondableResult :: Encode r => Respondable (Result r) where
+  statusCode (Success s) = s.status
+  statusCode (Failure f) = f.status
+
+  encodeBody (Success s) = encodeJSON s.body
+  encodeBody (Failure f) = "{ \"message\": [\"" <> f.message <> "\"] }"
+
+  systemError _ = Failure { status: 500, message: "Internal server error" }
 
 newtype MyJson = MyJson { content :: String }
 
@@ -60,7 +73,10 @@ getConfig = do
 
 
 myJson :: forall e. Handler e (Result MyJson)
-myJson = pure $ result 200 $ MyJson { content: "test content :)" }
+myJson = pure $ Success
+  { status: 200
+  , body: MyJson { content: "test content :)" }
+  }
 
 
 
@@ -79,7 +95,7 @@ instance servableCookie :: Servable c (console :: CONSOLE | e) s => Servable c (
       , httpOnly: true
       }
     case serve ctx handler req res path of
-      Nothing -> respond res $ errorMsg 500 "Something went wrong."
+      Nothing -> respond res $ ConveyorError 500 "Something went wrong."
       Just s -> s
 
 
