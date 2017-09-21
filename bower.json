@@ -35,7 +35,8 @@
     "purescript-tuples": "^4.1.0"
   },
   "devDependencies": {
-    "purescript-conveyor": "^0.7.0",
-    "purescript-node-process": "^4.0.0"
+    "purescript-conveyor": "^0.8.0",
+    "purescript-node-process": "^4.0.0",
+    "purescript-foreign-generic": "^5.0.0"
   }
 }
