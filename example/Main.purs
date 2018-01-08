@@ -3,22 +3,20 @@ module Main where
 
 import Prelude
 
+import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Control.Monad.Eff.Exception (EXCEPTION)
-import Control.Monad.Eff.Ref (REF)
 import Conveyor (run)
-import Conveyor.Handler (Handler)
-import Conveyor.Respondable (class Respondable, ConveyorError(..), respond)
+import Conveyor.Argument (RawData(..))
+import Conveyor.Respondable (class Respondable, Responder(..))
 import Conveyor.Servable (class Servable, serve)
-import Data.Foreign.Class (class Encode)
-import Data.Foreign.Generic (defaultOptions, encodeJSON, genericEncode)
-import Data.Generic.Rep (class Generic)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
 import Node.HTTP (HTTP, ListenOptions, requestHeaders)
 import Node.HTTP.Cookie (setCookie, getCookie, getCookies)
 import Node.Process (PROCESS, lookupEnv)
+import Simple.JSON (class WriteForeign, write)
 
 
 
@@ -26,21 +24,24 @@ data Result r
   = Success { status :: Int, body :: r }
   | Failure { status :: Int, message :: String }
 
-instance respondableResult :: Encode r => Respondable (Result r) where
-  statusCode (Success s) = s.status
-  statusCode (Failure f) = f.status
+type MyJson = { content :: String }
 
-  encodeBody (Success s) = encodeJSON s.body
-  encodeBody (Failure f) = "{ \"message\": [\"" <> f.message <> "\"] }"
 
-  systemError _ = Failure { status: 500, message: "Internal server error" }
 
-newtype MyJson = MyJson { content :: String }
-
-derive instance genericMyJson :: Generic MyJson _
-
-instance encodeMyJson :: Encode MyJson where
-  encode = genericEncode $ defaultOptions { unwrapSingleConstructors = true }
+instance respondableResult :: WriteForeign r => Respondable (Result r) where
+  toResponder (Success s) =
+    Responder
+      { contentType: "application/json"
+      , code: s.status
+      , body: write s.body
+      }
+  toResponder (Failure f) =
+    Responder
+      { contentType: "application/json"
+      , code: f.status
+      , body: write { messages: [ f.message ] }
+      }
+  fromError _ = Failure { status: 500, message: "Internal server error ;)" }
 
 
 
@@ -72,35 +73,34 @@ getConfig = do
 
 
 
-myJson :: forall e. Handler e (Result MyJson)
+myJson :: forall e. Aff e (Result MyJson)
 myJson = pure $ Success
   { status: 200
-  , body: MyJson { content: "test content :)" }
+  , body: { content: "test content :)" }
   }
 
 
 
 newtype Cookie s = Cookie s
 
-instance servableCookie :: Servable c (console :: CONSOLE | e) s => Servable c (console :: CONSOLE | e) (Cookie s) where
-  serve ctx (Cookie handler) req res path = Just do
-    log $ show $ requestHeaders req
-    log $ show $ getCookies req
-    log $ show $ getCookie req "id"
-    setCookie res
-      { key: "id"
-      , value: "fjdkaflk"
-      , maxAge: Just 60
-      , secure: false
-      , httpOnly: true
-      }
-    case serve ctx handler req res path of
-      Nothing -> respond res $ ConveyorError 500 "Something went wrong."
-      Just s -> s
+instance servableCookie :: Servable c (http :: HTTP, console :: CONSOLE | e) s => Servable c (http :: HTTP, console :: CONSOLE | e) (Cookie s) where
+  serve (Cookie servable) ctx rawData@(RawData rd) = do
+    liftEff do
+      log $ show $ requestHeaders rd.req
+      log $ show $ getCookies rd.req
+      log $ show $ getCookie rd.req "id"
+      setCookie rd.res
+        { key: "id"
+        , value: "fjdkaflk"
+        , maxAge: Just 60
+        , secure: false
+        , httpOnly: true
+        }
+    serve servable ctx rawData
 
 
 
-main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, exception :: EXCEPTION, ref :: REF, http :: HTTP | e ) Unit
+main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, http :: HTTP | e ) Unit
 main = do
   config <- getConfig
-  run (Cookie { myJson }) config
+  run config (Cookie { myJson })
