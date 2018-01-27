@@ -7,13 +7,13 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
-import Conveyor (run)
+import Conveyor (handler)
 import Conveyor.Argument (RawData(..))
 import Conveyor.Respondable (class Respondable, Responder(..))
 import Conveyor.Servable (class Servable, serve)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
-import Node.HTTP (HTTP, ListenOptions, requestHeaders)
+import Node.HTTP (HTTP, ListenOptions, createServer, listen, requestHeaders)
 import Node.HTTP.Cookie (setCookie, getCookie, getCookies)
 import Node.Process (PROCESS, lookupEnv)
 import Simple.JSON (class WriteForeign, write)
@@ -103,4 +103,5 @@ instance servableCookie :: Servable c (http :: HTTP, console :: CONSOLE | e) s =
 main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, http :: HTTP | e ) Unit
 main = do
   config <- getConfig
-  run config (Cookie { myJson })
+  server <- createServer $ handler $ Cookie { myJson }
+  listen server config $ pure unit
