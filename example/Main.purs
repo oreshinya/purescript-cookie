@@ -9,7 +9,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log)
 import Conveyor (handler)
 import Conveyor.Argument (RawData(..))
-import Conveyor.Respondable (class Respondable, Responder(..))
+import Conveyor.Respondable (class Respondable, class RespondableError, Responder(..))
 import Conveyor.Servable (class Servable, serve)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
@@ -41,6 +41,8 @@ instance respondableResult :: WriteForeign r => Respondable (Result r) where
       , code: f.status
       , body: write { messages: [ f.message ] }
       }
+
+instance respondableErrorResult :: WriteForeign r => RespondableError (Result r) where
   fromError _ = Failure { status: 500, message: "Internal server error ;)" }
 
 

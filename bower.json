@@ -28,7 +28,7 @@
     "purescript-node-http": "^4.1.0"
   },
   "devDependencies": {
-    "purescript-conveyor": "^0.12.0",
+    "purescript-conveyor": "^0.13.0",
     "purescript-node-process": "^5.0.0"
   }
 }
