@@ -6,11 +6,12 @@ module Node.HTTP.Cookie
   ) where
 
 import Prelude
+
 import Control.Monad.Eff (Eff)
 import Data.Array (snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (Pattern(..), split, trim, joinWith)
 import Data.StrMap (StrMap, lookup, empty, fromFoldable)
+import Data.String (Pattern(..), split, trim, joinWith)
 import Data.Tuple (Tuple(..))
 import Node.HTTP (HTTP, Request, Response, setHeaders, requestHeaders)
 
@@ -19,6 +20,8 @@ import Node.HTTP (HTTP, Request, Response, setHeaders, requestHeaders)
 type Payload =
   { key :: String
   , value :: String
+  , domain :: Maybe String
+  , path :: Maybe String
   , maxAge :: Maybe Int
   , secure :: Boolean
   , httpOnly :: Boolean
@@ -32,7 +35,30 @@ setCookie res pld = setHeaders res "Set-Cookie" $ snoc (responseCookies res) $ t
 
 
 toField :: Payload -> String
-toField pld = joinWith "; " <<< setHttpOnly pld <<< setSecure pld <<< setMaxAge pld $ [ pld.key <> "=" <> pld.value ]
+toField pld =
+  joinWith "; "
+    <<< setHttpOnly pld
+    <<< setSecure pld
+    <<< setMaxAge pld
+    <<< setPath pld
+    <<< setDomain pld
+    $ [ pld.key <> "=" <> pld.value ]
+
+
+
+setDomain :: Payload -> Array String -> Array String
+setDomain pld xs =
+  case pld.domain of
+    Nothing -> xs
+    Just d -> snoc xs $ "Domain=" <> d
+
+
+
+setPath :: Payload -> Array String -> Array String
+setPath pld xs =
+  case pld.path of
+    Nothing -> xs
+    Just p -> snoc xs $ "Path=" <> p
 
 
 

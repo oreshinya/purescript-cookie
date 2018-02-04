@@ -94,6 +94,8 @@ instance servableCookie :: Servable c (http :: HTTP, console :: CONSOLE | e) s =
       setCookie rd.res
         { key: "id"
         , value: "fjdkaflk"
+        , domain: Nothing
+        , path: Just "/"
         , maxAge: Just 60
         , secure: false
         , httpOnly: true
