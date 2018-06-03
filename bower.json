@@ -25,10 +25,10 @@
     "output"
   ],
   "dependencies": {
-    "purescript-node-http": "^4.1.0"
+    "purescript-node-http": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-conveyor": "^0.13.0",
-    "purescript-node-process": "^5.0.0"
+    "purescript-conveyor": "^2.0.0",
+    "purescript-node-process": "^6.0.0"
   }
 }

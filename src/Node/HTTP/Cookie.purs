@@ -7,13 +7,13 @@ module Node.HTTP.Cookie
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
 import Data.Array (snoc, (!!))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.StrMap (StrMap, lookup, empty, fromFoldable)
 import Data.String (Pattern(..), split, trim, joinWith)
 import Data.Tuple (Tuple(..))
-import Node.HTTP (HTTP, Request, Response, setHeaders, requestHeaders)
+import Effect (Effect)
+import Foreign.Object (Object, lookup, empty, fromFoldable)
+import Node.HTTP (Request, Response, setHeaders, requestHeaders)
 
 
 
@@ -29,7 +29,7 @@ type Payload =
 
 
 
-setCookie :: forall e. Response -> Payload -> Eff (http :: HTTP | e) Unit
+setCookie :: Response -> Payload -> Effect Unit
 setCookie res pld = setHeaders res "Set-Cookie" $ snoc (responseCookies res) $ toField pld
 
 
@@ -91,7 +91,7 @@ getCookie req key = lookup key $ getCookies req
 
 
 
-getCookies :: Request -> StrMap String
+getCookies :: Request -> Object String
 getCookies req =
   case (getCookieStr req) of
     Nothing -> empty

@@ -3,19 +3,19 @@ module Main where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Console (CONSOLE, log)
 import Conveyor (handler)
-import Conveyor.Argument (RawData(..))
-import Conveyor.Respondable (class Respondable, class RespondableError, Responder(..))
+import Conveyor.Respondable (class Respondable, class RespondableError)
 import Conveyor.Servable (class Servable, serve)
+import Conveyor.Types (Responder(..))
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..))
-import Node.HTTP (HTTP, ListenOptions, createServer, listen, requestHeaders)
+import Effect (Effect)
+import Effect.Aff (Aff)
+import Effect.Class (liftEffect)
+import Effect.Console (log)
+import Node.HTTP (ListenOptions, createServer, listen, requestHeaders)
 import Node.HTTP.Cookie (setCookie, getCookie, getCookies)
-import Node.Process (PROCESS, lookupEnv)
+import Node.Process (lookupEnv)
 import Simple.JSON (class WriteForeign, write)
 
 
@@ -47,12 +47,12 @@ instance respondableErrorResult :: WriteForeign r => RespondableError (Result r)
 
 
 
-getHostname :: forall e. Eff e String
+getHostname :: Effect String
 getHostname = pure "0.0.0.0"
 
 
 
-getPort :: forall e. Eff (process :: PROCESS | e) Int
+getPort :: Effect Int
 getPort = do
   portStr <- lookupEnv "PORT"
   pure $ case (map fromString portStr) of
@@ -61,12 +61,12 @@ getPort = do
 
 
 
-getBacklog :: forall e. Eff e (Maybe Int)
+getBacklog :: Effect (Maybe Int)
 getBacklog = pure Nothing
 
 
 
-getConfig :: forall e. Eff (process :: PROCESS | e) ListenOptions
+getConfig :: Effect ListenOptions
 getConfig = do
   hostname <- getHostname
   port <- getPort
@@ -75,7 +75,7 @@ getConfig = do
 
 
 
-myJson :: forall e. Aff e (Result MyJson)
+myJson :: Aff (Result MyJson)
 myJson = pure $ Success
   { status: 200
   , body: { content: "test content :)" }
@@ -85,13 +85,13 @@ myJson = pure $ Success
 
 newtype Cookie s = Cookie s
 
-instance servableCookie :: Servable c (http :: HTTP, console :: CONSOLE | e) s => Servable c (http :: HTTP, console :: CONSOLE | e) (Cookie s) where
-  serve (Cookie servable) ctx rawData@(RawData rd) = do
-    liftEff do
-      log $ show $ requestHeaders rd.req
-      log $ show $ getCookies rd.req
-      log $ show $ getCookie rd.req "id"
-      setCookie rd.res
+instance servableCookie :: Servable c s => Servable c (Cookie s) where
+  serve (Cookie servable) ctx rawData = do
+    liftEffect do
+      log $ show $ requestHeaders rawData.req
+      log $ show $ getCookies rawData.req
+      log $ show $ getCookie rawData.req "id"
+      setCookie rawData.res
         { key: "id"
         , value: "fjdkaflk"
         , domain: Nothing
@@ -104,7 +104,7 @@ instance servableCookie :: Servable c (http :: HTTP, console :: CONSOLE | e) s =
 
 
 
-main :: forall e. Eff (process :: PROCESS, console :: CONSOLE, http :: HTTP | e ) Unit
+main :: Effect Unit
 main = do
   config <- getConfig
   server <- createServer $ handler $ Cookie { myJson }
