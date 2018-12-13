@@ -26,9 +26,5 @@
   ],
   "dependencies": {
     "purescript-node-http": "^5.0.0"
-  },
-  "devDependencies": {
-    "purescript-conveyor": "^2.0.0",
-    "purescript-node-process": "^6.0.0"
   }
 }
